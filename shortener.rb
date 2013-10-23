@@ -1,6 +1,7 @@
 require 'sinatra'
 require 'active_record'
 require 'pry'
+require 'digest/sha1'
 
 ###########################################################
 # Configuration
@@ -35,7 +36,7 @@ end
 ###########################################################
 
 get '/' do
-    @links = [] # FIXME
+    @links = Link.order("url DESC") # FIXME
     erb :index
 end
 
@@ -43,8 +44,28 @@ get '/new' do
     erb :form
 end
 
-post '/new' do
-    # PUT CODE HERE TO CREATE NEW SHORTENED LINKS
+get '/:name' do |n|
+  record = Link.where("code = ?", n)[0]
+  redirect to(record.url)
 end
 
-# MORE ROUTES GO HERE
+post '/new' do
+  url = params["url"]
+  if !url.start_with?("http://")
+    url.start_with?("www.") ? url.prepend("http://") : url.prepend("http://www.")
+  end
+  record = Link.where("url = ?", url)[0]
+  puts record
+  if record
+    record.code
+  else
+    @link = Link.new
+    @link.url = url
+    @link.code = Digest::SHA1.hexdigest url
+    if @link.save
+      @link.code
+    else
+      puts "error"
+    end
+  end
+end
